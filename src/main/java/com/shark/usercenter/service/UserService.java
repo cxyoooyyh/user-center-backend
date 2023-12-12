@@ -6,6 +6,9 @@ import com.shark.usercenter.model.domain.User;
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
 
+import static com.shark.usercenter.contant.UserConstant.ADMIN_ROLE;
+import static com.shark.usercenter.contant.UserConstant.USER_LOGIN_STATE;
+
 /**
 * @author admin_oyh
 * @description 针对表【user(用户)】的数据库操作Service
@@ -41,4 +44,7 @@ public interface UserService extends IService<User> {
      * @return
      */
     List<User> searchUsersByTags(List<String> tagNameList);
+
+    Integer updateUser(User updateUser, HttpServletRequest request);
+    boolean isAdmin(HttpServletRequest httpServletRequest);
 }

@@ -16,10 +16,12 @@ import org.springframework.util.DigestUtils;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static com.shark.usercenter.contant.UserConstant.ADMIN_ROLE;
 import static com.shark.usercenter.contant.UserConstant.USER_LOGIN_STATE;
 
 /**
@@ -172,6 +174,55 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         }
         List<User> userList = userMapper.selectList(queryWrapper);
         return userList.stream().map(this::getSafetyUser).collect(Collectors.toList());
+    }
+
+    /**
+     * 更新用户
+     * @param updateUser
+     * @param request
+     * @return
+     */
+    @Override
+    public Integer updateUser(User updateUser, HttpServletRequest request) {
+        User loginUser = getLoginUser(request);
+        Long id = updateUser.getId();
+        if (id <= 0) {
+            throw new BusinessException(ErrorCode.NO_AUTH);
+        }
+        if (loginUser == null) {
+            throw new BusinessException(ErrorCode.NO_AUTH);
+        }
+        if (!isAdmin(request) && !id.equals(loginUser.getId())) {
+            throw new BusinessException(ErrorCode.NO_AUTH);
+        }
+        User oldUser = userMapper.selectById(id);
+        if (oldUser == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        return userMapper.updateById(updateUser);
+    }
+
+    /**
+     * 用户是否登录
+     * @param request
+     * @return
+     */
+    public User getLoginUser(HttpServletRequest request) {
+        if (request == null) {
+            return null;
+        }
+        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
+        if (userObj == null) throw new BusinessException(ErrorCode.NO_AUTH);
+        return (User) userObj;
+    }
+    @Override
+    public boolean isAdmin(HttpServletRequest httpServletRequest)  {
+        Object userObj = httpServletRequest.getSession().getAttribute(USER_LOGIN_STATE);
+        User user = (User) userObj;
+        if (user == null || user.getUserRole() != ADMIN_ROLE) {
+            return false;
+        }
+        return true;
     }
 }
 

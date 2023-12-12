@@ -1,7 +1,9 @@
 package com.shark.usercenter.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.shark.usercenter.common.BaseResponse;
 import com.shark.usercenter.common.ErrorCode;
+import com.shark.usercenter.common.ResultUtils;
 import com.shark.usercenter.exception.BusinessException;
 import com.shark.usercenter.model.domain.User;
 import com.shark.usercenter.model.domain.request.UserLoginRequest;
@@ -42,6 +44,13 @@ public class UserController {
         // todo 校验用户是否合法
         return userService.getSafetyUser(userService.getById(id));
     }
+    @PostMapping("/update")
+    public BaseResponse UpdateUser(@RequestBody User updateUser, HttpServletRequest request) {
+        if (updateUser == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        return ResultUtils.success(userService.updateUser(updateUser, request));
+    }
     @GetMapping("/getTagList")
     public List<User> byTagsSearchUsers(@RequestParam List<String> tags) {
         if (CollectionUtils.isEmpty(tags)) {
@@ -52,14 +61,14 @@ public class UserController {
     @PostMapping("/register")
     public Long userRegister(@RequestBody UserRegisterRequest userRegisterRequest) {
         if (userRegisterRequest == null) {
-            new BusinessException(ErrorCode.NO_AUTH);
+            throw new BusinessException(ErrorCode.NO_AUTH);
         }
         String userPassword = userRegisterRequest.getUserPassword();
         String checkPassword = userRegisterRequest.getCheckPassword();
         String userAccount = userRegisterRequest.getUserAccount();
         String planetCode = userRegisterRequest.getPlanetCode();
         if (StringUtils.isAnyBlank(userAccount, userPassword, checkPassword, planetCode)) {
-            new BusinessException(ErrorCode.NULL_ERROR);
+            throw new BusinessException(ErrorCode.NULL_ERROR);
         }
         return userService.userRegister(userAccount, userPassword, checkPassword, planetCode);
     }
@@ -77,7 +86,7 @@ public class UserController {
     }
     @GetMapping("/search")
     public List<User> searchUsers(String username, HttpServletRequest httpServletRequest) {
-        if (!this.isAdmin(httpServletRequest)) {
+        if (!userService.isAdmin(httpServletRequest)) {
             return new ArrayList<>();
         }
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
@@ -89,7 +98,7 @@ public class UserController {
     }
     @PostMapping("/delete")
     public Boolean deleteUser(@RequestBody long id, HttpServletRequest httpServletRequest) {
-         if (!this.isAdmin(httpServletRequest)) {
+         if (!userService.isAdmin(httpServletRequest)) {
             return false;
         }
         if (id <= 0) {
@@ -111,13 +120,4 @@ public class UserController {
         userService.userLogout(request);
         return 1;
     }
-    private boolean isAdmin(HttpServletRequest httpServletRequest) {
-        Object userObj = httpServletRequest.getSession().getAttribute(USER_LOGIN_STATE);
-        User user = (User) userObj;
-        if (user == null || user.getUserRole() != ADMIN_ROLE) {
-            return false;
-        }
-        return true;
-    }
-
 }
