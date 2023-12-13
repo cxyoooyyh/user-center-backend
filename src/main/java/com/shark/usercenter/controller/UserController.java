@@ -28,8 +28,7 @@ import static com.shark.usercenter.contant.UserConstant.USER_LOGIN_STATE;
  */
 @RestController
 @RequestMapping("/user")
-@CrossOrigin
-
+@CrossOrigin(origins = {"http://localhost:5173/"}, allowCredentials = "true")
 public class UserController {
     @Resource
     private UserService userService;
@@ -73,7 +72,8 @@ public class UserController {
         return userService.userRegister(userAccount, userPassword, checkPassword, planetCode);
     }
     @PostMapping("/login")
-    public User userLogin(@RequestBody UserLoginRequest userLoginRequest, HttpServletRequest httpServletRequest) {
+    public BaseResponse<User> userLogin(@RequestBody UserLoginRequest userLoginRequest,
+    HttpServletRequest httpServletRequest) {
         if (userLoginRequest == null) {
             return null;
         }
@@ -82,7 +82,7 @@ public class UserController {
         if (StringUtils.isAnyBlank(userAccount, userPassword)) {
             return null;
         }
-        return userService.doLogin(userAccount, userPassword, httpServletRequest);
+        return ResultUtils.success(userService.doLogin(userAccount, userPassword, httpServletRequest));
     }
     @GetMapping("/search")
     public List<User> searchUsers(String username, HttpServletRequest httpServletRequest) {
@@ -94,6 +94,11 @@ public class UserController {
             queryWrapper.like("username", username);
         }
         List<User> userList = userService.list(queryWrapper);
+        return userList.stream().map(user -> userService.getSafetyUser(user)).collect(Collectors.toList());
+    }
+    @GetMapping("/recommend")
+    public List<User> recommendUsers(String username, HttpServletRequest httpServletRequest) {
+        List<User> userList = userService.list();
         return userList.stream().map(user -> userService.getSafetyUser(user)).collect(Collectors.toList());
     }
     @PostMapping("/delete")

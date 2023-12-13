@@ -114,8 +114,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         if (matcher.find()) {
             return null;
         }
-
-
         String encryptPassword = DigestUtils.md5DigestAsHex((SALT + userPassword).getBytes());
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("userAccount", userAccount);
@@ -124,7 +122,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         // 用户不存在
         if (user == null) {
             log.info("user login failed, user Account match userPassword");
-            return null;
+            throw new BusinessException(ErrorCode.NOT_LOGIN, "登錄失敗！");
         }
         // 用户脱敏
         User safetyUser = this.getSafetyUser(user);
