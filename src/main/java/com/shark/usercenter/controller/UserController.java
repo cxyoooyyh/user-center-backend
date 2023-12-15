@@ -1,6 +1,7 @@
 package com.shark.usercenter.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.shark.usercenter.common.BaseResponse;
 import com.shark.usercenter.common.ErrorCode;
 import com.shark.usercenter.common.ResultUtils;
@@ -10,6 +11,9 @@ import com.shark.usercenter.model.domain.request.UserLoginRequest;
 import com.shark.usercenter.model.domain.request.UserRegisterRequest;
 import com.shark.usercenter.service.UserService;
 import org.apache.commons.lang3.StringUtils;
+
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -32,6 +36,9 @@ import static com.shark.usercenter.contant.UserConstant.USER_LOGIN_STATE;
 public class UserController {
     @Resource
     private UserService userService;
+    @Resource
+    private RedisTemplate redisTemplate;
+    //private final static String COMMON_REDIS_USER_KEY = "brother:shark:user";
     @GetMapping("/current")
     public User getCurrentUser(HttpServletRequest httpServletRequest) {
         Object UserObj = httpServletRequest.getSession().getAttribute(USER_LOGIN_STATE);
@@ -97,9 +104,17 @@ public class UserController {
         return userList.stream().map(user -> userService.getSafetyUser(user)).collect(Collectors.toList());
     }
     @GetMapping("/recommend")
-    public List<User> recommendUsers(String username, HttpServletRequest httpServletRequest) {
-        List<User> userList = userService.list();
-        return userList.stream().map(user -> userService.getSafetyUser(user)).collect(Collectors.toList());
+    public Page<User> recommendUsers(@RequestParam("sizePage") Integer size,
+                                     @RequestParam("currentPage") Integer currentPage, HttpServletRequest request) {
+        User loginUser = userService.getLoginUser(request);
+        ValueOperations operations = redisTemplate.opsForValue();
+        String key = String.format("brother:shark:user:%s", loginUser.getId());
+        Page<User> userList = (Page<User>) (operations.get(key));
+        if (userList != null) return userList;
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        userList = userService.page(new Page<>(currentPage, size), queryWrapper);
+        operations.set(key, userList);
+        return userList;
     }
     @PostMapping("/delete")
     public Boolean deleteUser(@RequestBody long id, HttpServletRequest httpServletRequest) {
